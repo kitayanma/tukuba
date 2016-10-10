@@ -26,6 +26,50 @@ js_event js;
 float button ()
 {
 
+	int joy_fd( -1 ) , num_of_axis( 0 ) , num_of_buttons( 0 );
+	char name_of_joystick[80];
+	vector<char> joy_button;
+	vector<int> joy_axis;
+
+	if ( ( joy_fd = open( JOY_DEV, O_RDONLY ) ) < 0 ) {
+//		printf( "Failed to open %s" ,JOY_DEV );
+		cerr << "Failed to open " << JOY_DEV << endl;
+		return -1;
+	}
+
+	ioctl( joy_fd , JSIOCGAXES , &num_of_axis );
+	ioctl( joy_fd , JSIOCGBUTTONS , &num_of_buttons );
+	ioctl( joy_fd , JSIOCGNAME(80) , &name_of_joystick );
+
+	joy_button.resize( num_of_buttons , 0 );
+	joy_axis.resize( num_of_axis , 0 );
+
+//	printf( "Joystick: %s axis: %d buttons: %d\n" ,name_of_joystick ,num_of_axis ,num_of_buttons );
+
+	fcntl( joy_fd, F_SETFL, O_NONBLOCK ); // using non-blocking mode
+
+//	if ( check_apm() ) {
+//		return 1;
+//	}
+
+	for ( int i = 0 ; i < 10000 ; i++ ) {
+		imuLoop();
+		usleep( 1000 );
+		if( i % 1000 == 0 ) {
+			printf( "#" );
+			fflush( stdout );
+		}
+	}
+
+	for ( int i = 0 ; i < 4 ; i++ ) {
+		if ( !pwm.init( i ) ) {
+			fprintf( stderr , "Output Enable not set. Are you root?\n" );
+			return 0;
+		}
+		pwm.enable( i );
+		pwm.set_period( i , 500 );
+	}
+
 	read ( joy_fd , &js , sizeof ( js_event ) );
 
 	switch ( js.type & ~JS_EVENT_INIT ) {
@@ -66,7 +110,7 @@ int main()
 	cout<<"ok"<<endl;
 	while(true){
 		cout<<"ok"<<endl;
-		a=button();
+		a=button ();
 		if(a!=5){
 			cout<<a<<endl;
 		}
